@@ -1105,7 +1105,7 @@ EOF
 # build hummingbot
 if [ "$IS_HUMMINGBOT_ENABLED" = "True" ]; then
 cd /app/opencex || exit
-git clone  https://github.com/Polygant/hummingbot.git ./hmbot
+git clone  https://github.com/QOGE/hummingbot.git ./hmbot
 cd ./hmbot
 docker build -t hummingbot:latest -f Dockerfile --target=release .
 cat << EOF >> /app/opencex/docker-compose.yml
