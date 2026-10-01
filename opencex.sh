@@ -217,21 +217,29 @@ echo "`cat <<YOLLOPUKKI
      STEP 4 OF 12. SAFE ADDRESSES
 ===========================================================
 
-BTC_SAFE_ADDR* - bitcoin address. All BTC deposits go there
+QOGE_SAFE_ADDR* - Qogecoin legacy (q...) cold wallet. All QOGE deposits are swept there
 ETH_SAFE_ADDR* - ethereum address. All ETH and ERC-20 deposits go there
+
+Bitcoin is disabled on this fork (Qogecoin uses RPC 8332).
 
 -----------------------------------------------------------
 YOLLOPUKKI`"
 
 while true; do
 
-echo -n "BTC_SAFE_ADDR*: "
-read BTC_SAFE_ADDR
-export BTC_SAFE_ADDR
+echo -n "QOGE_SAFE_ADDR* [qYVi6JTWot5bNDkFkXbXWZJwcGtqBb47SC]: "
+read QOGE_SAFE_ADDR
+if [ -z "$QOGE_SAFE_ADDR" ]; then
+  QOGE_SAFE_ADDR=qYVi6JTWot5bNDkFkXbXWZJwcGtqBb47SC
+fi
+export QOGE_SAFE_ADDR
 
 echo -n "ETH_SAFE_ADDR*: "
 read ETH_SAFE_ADDR
 export ETH_SAFE_ADDR
+
+BTC_SAFE_ADDR=
+export BTC_SAFE_ADDR
 
 echo "-----------------------------------------------------------"
     read -p "IS EVERYTHING CORRECT? (y or n)" YESORNO
@@ -618,15 +626,34 @@ export AMQP_PASS
 export AMQP_HOST
 export AMQP_PORT
 
-#echo "Bitcoin node credentials - user, password, server address and port"
+# Bitcoin is disabled; dummy values keep .env.template substitution working.
 BTC_NODE_USER=opencex
-BTC_NODE_PASS=$(< /dev/urandom tr -dc A-Z-a-z-0-9 | head -c12)
-BTC_NODE_PORT=8332
-BTC_NODE_HOST=bitcoind
+BTC_NODE_PASS=unused
+BTC_NODE_PORT=8333
+BTC_NODE_HOST=127.0.0.1
 export BTC_NODE_USER
 export BTC_NODE_PASS
 export BTC_NODE_PORT
 export BTC_NODE_HOST
+export COMMON_TASKS_BTC=False
+
+# Qogecoin node on the host (RPC 8332). Containers use host.docker.internal.
+QOGE_NODE_USER=opencex
+QOGE_NODE_PASS=$(< /dev/urandom tr -dc A-Z-a-z-0-9 | head -c12)
+QOGE_NODE_PORT=8332
+QOGE_NODE_HOST=host.docker.internal
+QOGE_NODE_WALLET=opencex
+QOGE_NODE_COOKIE_FILE=
+QOGE_ADDRESS_LEGACY=True
+COMMON_TASKS_QOGE=True
+export QOGE_NODE_USER
+export QOGE_NODE_PASS
+export QOGE_NODE_PORT
+export QOGE_NODE_HOST
+export QOGE_NODE_WALLET
+export QOGE_NODE_COOKIE_FILE
+export QOGE_ADDRESS_LEGACY
+export COMMON_TASKS_QOGE
 
 #echo "Redis credentials - server address and port"
 REDIS_HOST=redis
@@ -719,8 +746,8 @@ docker build -t opencex .
 
 mkdir /app/opencex -p
 cd /app/opencex || exit
-mkdir caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs bitcoind_data -p
-chmod 777 caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs bitcoind_data
+mkdir caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs -p
+chmod 777 caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs
 docker network create caddy
 
 cat << EOF > docker-compose.yml
@@ -734,6 +761,8 @@ services:
      image: opencex:latest
      command: gunicorn  exchange.wsgi:application   -b 0.0.0.0:8080 -w 2 --access-logfile - --error-logfile -
 #     entrypoint: tail -f /dev/null
+     extra_hosts:
+      - "host.docker.internal:host-gateway"
      restart: always
      volumes:
       - /app/opencex/backend:/app
@@ -746,7 +775,7 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
+
 
     opencex-wss:
      container_name: opencex-wss
@@ -764,13 +793,14 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-cel:
      container_name: opencex-cel
      image: opencex:latest
-     command: celery -A exchange worker -l info -n general -B -s /tmp/cebeat.db -X btc,eth_new_blocks,eth_deposits,eth_payouts,eth_check_balances,eth_accumulations,eth_tokens_accumulations,eth_send_gas,bnb_new_blocks,bnb_deposits,bnb_payouts,bnb_check_balances,bnb_accumulations,bnb_tokens_accumulations,bnb_send_gas,trx_new_blocks,trx_deposits,trx_payouts,trx_check_balances,trx_accumulations,trx_tokens_accumulations,matic_new_blocks,matic_deposits,matic_payouts,matic_check_balances,matic_accumulations,matic_tokens_accumulations
+     command: celery -A exchange worker -l info -n general -B -s /tmp/cebeat.db -X btc,qoge,eth_new_blocks,eth_deposits,eth_payouts,eth_check_balances,eth_accumulations,eth_tokens_accumulations,eth_send_gas,bnb_new_blocks,bnb_deposits,bnb_payouts,bnb_check_balances,bnb_accumulations,bnb_tokens_accumulations,bnb_send_gas,trx_new_blocks,trx_deposits,trx_payouts,trx_check_balances,trx_accumulations,trx_tokens_accumulations,matic_new_blocks,matic_deposits,matic_payouts,matic_check_balances,matic_accumulations,matic_tokens_accumulations
+     extra_hosts:
+      - "host.docker.internal:host-gateway"
      restart: always
      volumes:
       - /app/opencex/backend:/app
@@ -783,7 +813,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-stack:
@@ -802,14 +831,15 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
-    opencex-btc:
-     container_name: opencex-btc
+    opencex-qoge:
+     container_name: opencex-qoge
      image: opencex:latest
-     command: /app/manage.py btcworker
+     command: /app/manage.py qogeworker
      restart: always
+     extra_hosts:
+      - "host.docker.internal:host-gateway"
      volumes:
       - /app/opencex/backend:/app
      networks:
@@ -821,7 +851,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-eth-blocks:
@@ -840,7 +869,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-bnb-blocks:
@@ -859,7 +887,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-trx-blocks:
@@ -878,7 +905,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-matic-blocks:
@@ -897,7 +923,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-deposits:
@@ -916,7 +941,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-payouts:
@@ -935,7 +959,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-balances:
@@ -954,7 +977,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-coin-accumulations:
@@ -973,7 +995,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-token-accumulations:
@@ -992,7 +1013,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     opencex-gas:
@@ -1011,7 +1031,6 @@ services:
       - frontend
       - nuxt
       - caddy
-      - bitcoind
       - opencex
 
     frontend:
@@ -1092,14 +1111,6 @@ services:
      labels:
        caddy: $RMQDOMAIN
        caddy.reverse_proxy: "{{upstreams http 15672}}"
-    bitcoind:
-      container_name: bitcoind
-      restart: always
-      image: lncm/bitcoind:v24.0.1
-      volumes:
-      - ./bitcoind_data/:/data/.bitcoin/
-      networks:
-      - caddy
 EOF
 
 # build hummingbot
@@ -1140,25 +1151,17 @@ docker compose up -d
 
 cd /app/opencex || exit
 docker compose stop
-cat << EOF > /app/opencex/bitcoind_data/bitcoin.conf
-rpcuser=$BTC_NODE_USER
-rpcpassword=$BTC_NODE_PASS
-rpcallowip=0.0.0.0/0
-rpcbind=0.0.0.0
-rpcport=$BTC_NODE_PORT
-prune=20000
-wallet=/data/.bitcoin/opencex
-
-EOF
 docker compose up -d
-sleep 30;
-docker exec -it bitcoind bitcoin-cli -named createwallet wallet_name="opencex" descriptors=false
-docker restart bitcoind
 sleep 30;
 docker exec -it opencex python wizard.py
 cd /app/opencex || exit
 docker compose stop
 docker compose up -d
+
+echo "Host qogecoind must accept Docker RPC on 8332:"
+echo "  rpcuser/rpcpassword = QOGE_NODE_USER / QOGE_NODE_PASS in /app/opencex/backend/.env"
+echo "  rpcallowip covering the Docker bridge (e.g. 172.16.0.0/12)"
+echo "  wallet=opencex (watch-only, disable_private_keys=true)"
 
 ### Registration of the installation OpenCEX
 curl --location 'http://alertbot.plgdev.com/registration' \
