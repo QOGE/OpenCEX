@@ -12,9 +12,13 @@ Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.
 <a href="https://polygant.notion.site/OpenCEX-Help-Center-8cf8c842bde947c3818a615a88ceef9c" target="_blank">OpenCEX documentation</a> | <a href="https://t.me/opencex" target="_blank">Telegram chat</a>
 </p>
 
+> [!NOTE]
+> This is the QOGE fork of unmaintained Polygant OpenCEX (`master` only).
+> Installer clones backend, frontend, static, and admin from `github.com/QOGE/...`.
+
 > [!CAUTION]
-> This repository is not maintained.  
-> The code is provided as-is.
+> Upstream Polygant OpenCEX is not maintained.
+> The original code is provided as-is.
 
 ## Main features.
 
@@ -78,7 +82,7 @@ You need to SSH into your server as root and run the following command:
 
     mkdir /app ; 
     cd /app/ || exit ; 
-    git clone https://github.com/Polygant/OpenCEX.git ./deploy ;
+    git clone https://github.com/QOGE/OpenCEX.git ./deploy ;
     cd deploy ; 
     chmod +x opencex.sh ;
     ./opencex.sh 2>&1 | tee /tmp/install.txt
