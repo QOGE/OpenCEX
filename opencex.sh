@@ -667,6 +667,10 @@ export REDIS_PASS
 BOTS_API_BASE_URL=http://opencex:8080
 export BOTS_API_BASE_URL
 
+# Django / JWT signing key (must not be the public OpenCEX default)
+SECRET_KEY=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c64;echo;)
+export SECRET_KEY
+
 # key for encrypting private keys in the database (generated automatically)
 CRYPTO_KEY=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-12};echo;)
 export CRYPTO_KEY
