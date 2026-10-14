@@ -98,7 +98,7 @@ If something goes wrong you can clean the installation and try again
 🥳 Congratulations, the exchange has been successfully installed!  
 You can open it by your domain name.
 
-**After installation, you need to download the file /app/openex/backend/save_to_self_and_delete.txt and delete it from the server.**
+**After installation, copy any mode-600 files from `/app/opencex/backend/.handoff/` off the server and delete them. They hold keeper cosigner keys and the generated admin password. Do not leave them on the host.**
 
 **Mind that BTC node will take up to 30 hours to fully sync. BTC transactions sent to user addresses in this period will be collected and credited only after a full sync.**
 
