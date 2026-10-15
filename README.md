@@ -53,13 +53,13 @@ Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.
 <tr><td>Redis server</td><td>7.0.4</td><td>Cache / broker helper</td></tr>
 <tr><td>RabbitMQ</td><td>3.9.22-management</td><td>Message-broker software</td></tr>
 <tr><td>Python</td><td>3.8.18</td><td>Backend runtime (EOL; upgrade is a dedicated project)</td></tr>
-<tr><td>Django</td><td>3.2.23</td><td>Backend framework (EOL; upgrade is a dedicated project)</td></tr>
+<tr><td>Django</td><td>3.2.25</td><td>Backend framework (last 3.2.x; 4.2+ is a dedicated project)</td></tr>
 <tr><td>VUE.JS</td><td>3.2.25</td><td>JS framework</td></tr>
 <tr><td>NUXT.JS</td><td>2.15.7</td><td>JS framework (Node 14.18.1)</td></tr>
 <tr><td>Qogecoin Core</td><td>host daemon</td><td>QOGE node on the host, not in compose</td></tr>
 </table>
 
-Python 3.8 and Django 3.2 are both end-of-life. This installer pins those versions so a new box matches the current QOGE stack. Moving to Python 3.12 / Django 4.2+ is a separate upgrade, not part of `opencex.sh`.
+Python 3.8 and Django 3.2 are both end-of-life. This installer pins Python 3.8.18 and Django 3.2.25 (the last 3.2.x) so a new box matches the current QOGE stack. Moving to Python 3.12 / Django 4.2+ is a separate upgrade, not part of `opencex.sh`. The bundled TradingView charting library is CL v21.066 (2022-04-01) and is replaced only with a licensed newer build.
 
 `opencex.sh` clones backend/frontend/static/admin at the commits listed at the top of the script (override with `BACKEND_COMMIT` and friends). It uses `postgres:14` rather than `postgres:latest`, `set -e`, `collectstatic --noinput`, and non-interactive `docker exec`. Data directories are mode 700. Do not regenerate `docker-compose.yml` on a running database (`FORCE_COMPOSE=1` is required to overwrite). Do not change the live Postgres image under an existing `postgresql_data` volume.
 

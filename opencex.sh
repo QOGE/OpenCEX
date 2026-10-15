@@ -1,6 +1,7 @@
 #!/bin/bash
 # C-15: pin source commits and image tags so a new install is reproducible.
-# Python 3.8 / Django 3.2.23 stay until a dedicated runtime upgrade.
+# Python 3.8 / Django 3.2.25 stay until a dedicated Django 4.2+ / Python 3.12 upgrade.
+# Vendored TradingView CL v21.066 (2022-04-01) stays until a licensed replacement.
 # Override any pin with an environment variable before running this script.
 
 BACKEND_REPO="${BACKEND_REPO:-https://github.com/QOGE/OpenCEX-backend.git}"
