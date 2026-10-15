@@ -1,4 +1,61 @@
 #!/bin/bash
+# C-15: pin source commits and image tags so a new install is reproducible.
+# Python 3.8 / Django 3.2.23 stay until a dedicated runtime upgrade.
+# Override any pin with an environment variable before running this script.
+
+BACKEND_REPO="${BACKEND_REPO:-https://github.com/QOGE/OpenCEX-backend.git}"
+FRONTEND_REPO="${FRONTEND_REPO:-https://github.com/QOGE/OpenCEX-frontend.git}"
+STATIC_REPO="${STATIC_REPO:-https://github.com/QOGE/OpenCEX-static.git}"
+ADMIN_REPO="${ADMIN_REPO:-https://github.com/QOGE/OpenCEX-JS-admin.git}"
+HUMMINGBOT_REPO="${HUMMINGBOT_REPO:-https://github.com/QOGE/hummingbot.git}"
+
+BACKEND_COMMIT="${BACKEND_COMMIT:-3ef720d5edac434646d466ef81a1f19b28a49367}"
+FRONTEND_COMMIT="${FRONTEND_COMMIT:-19649a7feccec2bfb2250994a6b4956bd0d0c3b2}"
+STATIC_COMMIT="${STATIC_COMMIT:-6665afad3f875dc41d13c87b23c145ae25622a1c}"
+ADMIN_COMMIT="${ADMIN_COMMIT:-1165aadba40cd6f012a641f19c38f84be5761fca}"
+HUMMINGBOT_COMMIT="${HUMMINGBOT_COMMIT:-f04f835e6f8618140eb32d10373aaa6c0ed63234}"
+
+POSTGRES_IMAGE="${POSTGRES_IMAGE:-postgres:14}"
+REDIS_IMAGE="${REDIS_IMAGE:-redis:7.0.4}"
+RABBITMQ_IMAGE="${RABBITMQ_IMAGE:-rabbitmq:3.9.22-management}"
+CADDY_IMAGE="${CADDY_IMAGE:-lucaslorentz/caddy-docker-proxy:2.13.1}"
+
+rand_alnum() {
+    local n="${1:-32}"
+    < /dev/urandom tr -dc '_A-Za-z0-9' | head -c "$n"
+    echo
+}
+
+clone_at_commit() {
+    local url="$1" dest="$2" sha="$3"
+    if [ -d "$dest/.git" ]; then
+        if [ "${OPENCEX_UPDATE_SOURCES:-0}" = "1" ]; then
+            echo "Updating $dest to $sha"
+            git -C "$dest" fetch origin
+            git -C "$dest" checkout --detach "$sha"
+        else
+            echo "Keeping existing $dest ($(git -C "$dest" rev-parse --short HEAD)). Set OPENCEX_UPDATE_SOURCES=1 to check out $sha."
+        fi
+    else
+        echo "Cloning $url into $dest at $sha"
+        git clone "$url" "$dest"
+        git -C "$dest" checkout --detach "$sha"
+    fi
+}
+
+wait_for_postgres() {
+    local i
+    echo "Waiting for PostgreSQL..."
+    for i in $(seq 1 60); do
+        if docker exec postgresql pg_isready -U "${DB_USER}" -d "${DB_NAME}" >/dev/null 2>&1; then
+            echo "PostgreSQL is ready."
+            return 0
+        fi
+        sleep 2
+    done
+    echo "PostgreSQL did not become ready." >&2
+    return 1
+}
 
 if [ $(dpkg-query -W -f='${Status}' docker-ce 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
     echo "Docker not found, install docker..."
@@ -15,13 +72,14 @@ else
     echo "Docker already installed."
 fi
 
+set -e
 
 mkdir /app/opencex -p
 cd /app/opencex || exit
-git clone  https://github.com/QOGE/OpenCEX-backend.git ./backend
-git clone  https://github.com/QOGE/OpenCEX-frontend.git ./frontend
-git clone  https://github.com/QOGE/OpenCEX-static.git ./nuxt
-git clone  https://github.com/QOGE/OpenCEX-JS-admin.git ./admin
+clone_at_commit "$BACKEND_REPO" ./backend "$BACKEND_COMMIT"
+clone_at_commit "$FRONTEND_REPO" ./frontend "$FRONTEND_COMMIT"
+clone_at_commit "$STATIC_REPO" ./nuxt "$STATIC_COMMIT"
+clone_at_commit "$ADMIN_REPO" ./admin "$ADMIN_COMMIT"
 
 echo "`cat <<YOLLOPUKKI
 
@@ -668,15 +726,15 @@ BOTS_API_BASE_URL=http://opencex:8080
 export BOTS_API_BASE_URL
 
 # Django / JWT signing key (must not be the public OpenCEX default)
-SECRET_KEY=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c64;echo;)
+SECRET_KEY=$(rand_alnum 64)
 export SECRET_KEY
 
-# key for encrypting private keys in the database (generated automatically)
-CRYPTO_KEY=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-12};echo;)
+# AES-CBC wallet-key encryption passphrase (hashed to 32 bytes in AESCoderDecoder)
+CRYPTO_KEY=$(rand_alnum 32)
 export CRYPTO_KEY
 
 # bot user password
-BOT_PASSWORD=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-12};echo;)
+BOT_PASSWORD=$(rand_alnum 24)
 export BOT_PASSWORD
 
 envsubst < /app/opencex/backend/.env.template > /app/opencex/backend/.env
@@ -751,9 +809,18 @@ docker build -t opencex .
 mkdir /app/opencex -p
 cd /app/opencex || exit
 mkdir caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs -p
-chmod 777 caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs
-docker network create caddy
+chmod 700 caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs
+# Official postgres/redis/rabbitmq images run as uid 999.
+chown 999:999 postgresql_data redis_data rabbitmq_data rabbitmq_logs
+docker network inspect caddy >/dev/null 2>&1 || docker network create caddy
 
+WRITE_COMPOSE=1
+if [ -f docker-compose.yml ] && [ "${FORCE_COMPOSE:-0}" != "1" ]; then
+  echo "Keeping existing docker-compose.yml (set FORCE_COMPOSE=1 to regenerate)."
+  WRITE_COMPOSE=0
+fi
+
+if [ "$WRITE_COMPOSE" = "1" ]; then
 cat << EOF > docker-compose.yml
 version: "3.7"
 networks:
@@ -1061,7 +1128,7 @@ services:
      networks:
      - caddy
     caddy:
-      image: lucaslorentz/caddy-docker-proxy:latest
+      image: $CADDY_IMAGE
       restart: always
       ports:
         - 80:80
@@ -1071,14 +1138,14 @@ services:
       networks:
         - caddy
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
+        - /var/run/docker.sock:/var/run/docker.sock:ro
         - ./caddy_data:/data
 
     postgresql:
      container_name: postgresql
      hostname: postgresql
      restart: always
-     image: postgres:latest
+     image: $POSTGRES_IMAGE
      shm_size: 1g
      volumes:
         - ./postgresql_data:/var/lib/postgresql/data
@@ -1092,7 +1159,7 @@ services:
     redis:
      container_name: redis
      restart: always
-     image: redis:latest
+     image: $REDIS_IMAGE
      volumes:
          - ./redis_data:/data
      entrypoint: redis-server
@@ -1102,7 +1169,7 @@ services:
      hostname: rabbitmq
      container_name: rabbitmq
      restart: always
-     image: rabbitmq:3.9.22-management
+     image: $RABBITMQ_IMAGE
      volumes:
          - ./rabbitmq_data/:/var/lib/rabbitmq/
          - ./rabbitmq_logs/:/var/log/rabbitmq/
@@ -1116,13 +1183,15 @@ services:
        caddy: $RMQDOMAIN
        caddy.reverse_proxy: "{{upstreams http 15672}}"
 EOF
+fi
 
 # build hummingbot
 if [ "$IS_HUMMINGBOT_ENABLED" = "True" ]; then
 cd /app/opencex || exit
-git clone  https://github.com/QOGE/hummingbot.git ./hmbot
+clone_at_commit "$HUMMINGBOT_REPO" ./hmbot "$HUMMINGBOT_COMMIT"
 cd ./hmbot
 docker build -t hummingbot:latest -f Dockerfile --target=release .
+if [ "$WRITE_COMPOSE" = "1" ]; then
 cat << EOF >> /app/opencex/docker-compose.yml
     hummingbot:
      container_name: hummingbot
@@ -1142,13 +1211,15 @@ cat << EOF >> /app/opencex/docker-compose.yml
      stdin_open: true
 EOF
 fi
+fi
 cd /app/opencex
 docker compose up -d
 
-docker stop opencex-cel opencex-wss
-sleep 5;
-docker exec -it opencex python ./manage.py migrate
-docker exec -it opencex python ./manage.py collectstatic
+docker stop opencex-cel opencex-wss || true
+sleep 5
+wait_for_postgres
+docker exec opencex python ./manage.py migrate --noinput
+docker exec opencex python ./manage.py collectstatic --noinput
 docker compose up -d
 
 
@@ -1156,8 +1227,14 @@ docker compose up -d
 cd /app/opencex || exit
 docker compose stop
 docker compose up -d
-sleep 30;
-docker exec -it opencex python wizard.py
+sleep 30
+wait_for_postgres
+if [ -f /app/opencex/backend/.wizard_complete ]; then
+  echo "Skipping wizard (found /app/opencex/backend/.wizard_complete)."
+else
+  docker exec opencex python wizard.py
+  touch /app/opencex/backend/.wizard_complete
+fi
 cd /app/opencex || exit
 docker compose stop
 docker compose up -d
@@ -1167,10 +1244,14 @@ echo "  rpcuser/rpcpassword = QOGE_NODE_USER / QOGE_NODE_PASS in /app/opencex/ba
 echo "  rpcallowip covering the Docker bridge (e.g. 172.16.0.0/12)"
 echo "  wallet=opencex (watch-only, disable_private_keys=true)"
 
-### Registration of the installation OpenCEX
-curl --location 'http://alertbot.plgdev.com/registration' \
---header 'Content-Type: application/json' \
---data "{\"domain\": \"${DOMAIN}\"}"
+### Optional registration ping to upstream Polygant (off by default).
+if [ "${OPENCEX_PHONE_HOME:-0}" = "1" ]; then
+  curl --location 'http://alertbot.plgdev.com/registration' \
+    --header 'Content-Type: application/json' \
+    --data "{\"domain\": \"${DOMAIN}\"}"
+else
+  echo "Skipping Polygant registration POST (set OPENCEX_PHONE_HOME=1 to enable)."
+fi
 
 
 # cleanup

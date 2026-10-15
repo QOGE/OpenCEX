@@ -46,18 +46,22 @@ Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.
 ## The software used.
 
 <table>
-<tr><td>Docker</td><td>latest</td><td>OS-level virtualization</td></tr>
-<tr><td>NGINX</td><td>1.22.0</td><td>Web server</td></tr>
-<tr><td>Caddy</td><td>2.6.2</td><td>Router</td></tr>
-<tr><td>Postgres</td><td>14.5</td><td>RDBMS</td></tr>
-<tr><td>Redis server</td><td>7.0.4</td><td>RDBMS</td></tr>
-<tr><td>RabbitMQ</td><td>3.10.7</td><td>Message-broker software</td></tr>
-<tr><td>Python</td><td>3.8</td><td>Programming language</td></tr>
-<tr><td>Django</td><td>3.2.7</td><td>Python framework</td></tr>
+<tr><td>Docker</td><td>CE (installer-pinned compose images)</td><td>OS-level virtualization</td></tr>
+<tr><td>NGINX</td><td>1.26.3-alpine</td><td>Web server (frontend/admin images)</td></tr>
+<tr><td>Caddy</td><td>lucaslorentz/caddy-docker-proxy:2.13.1</td><td>TLS reverse proxy</td></tr>
+<tr><td>Postgres</td><td>14</td><td>RDBMS (do not use postgres:latest)</td></tr>
+<tr><td>Redis server</td><td>7.0.4</td><td>Cache / broker helper</td></tr>
+<tr><td>RabbitMQ</td><td>3.9.22-management</td><td>Message-broker software</td></tr>
+<tr><td>Python</td><td>3.8.18</td><td>Backend runtime (EOL; upgrade is a dedicated project)</td></tr>
+<tr><td>Django</td><td>3.2.23</td><td>Backend framework (EOL; upgrade is a dedicated project)</td></tr>
 <tr><td>VUE.JS</td><td>3.2.25</td><td>JS framework</td></tr>
-<tr><td>NUXT.JS</td><td>2.15.7</td><td>JS framework</td></tr>
-<tr><td>Bitcoin Core</td><td>latest</td><td>Bitcoin node</td></tr>
+<tr><td>NUXT.JS</td><td>2.15.7</td><td>JS framework (Node 14.18.1)</td></tr>
+<tr><td>Qogecoin Core</td><td>host daemon</td><td>QOGE node on the host, not in compose</td></tr>
 </table>
+
+Python 3.8 and Django 3.2 are both end-of-life. This installer pins those versions so a new box matches the current QOGE stack. Moving to Python 3.12 / Django 4.2+ is a separate upgrade, not part of `opencex.sh`.
+
+`opencex.sh` clones backend/frontend/static/admin at the commits listed at the top of the script (override with `BACKEND_COMMIT` and friends). It uses `postgres:14` rather than `postgres:latest`, `set -e`, `collectstatic --noinput`, and non-interactive `docker exec`. Data directories are mode 700. Do not regenerate `docker-compose.yml` on a running database (`FORCE_COMPOSE=1` is required to overwrite). Do not change the live Postgres image under an existing `postgresql_data` volume.
 
 ## Before installing:
 
