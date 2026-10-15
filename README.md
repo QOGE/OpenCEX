@@ -1,36 +1,48 @@
 <p align="center">
-  <a href="https://polygant.net/opencex/" target="_blank">
-    <img alt="OpenCEX Logo" width="500" src="https://github.com/Polygant/OpenCEX/blob/master/logo.png">
-  </a>
+  <img alt="OpenCEX Logo" width="500" src="https://github.com/QOGE/OpenCEX/blob/master/logo.png">
 </p>
 
 <p align="center">
 OpenCEX is a free and open source cryptocurrency exchange platform.<br>
-Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.  
-
-<p align="center">
-<a href="https://polygant.notion.site/OpenCEX-Help-Center-8cf8c842bde947c3818a615a88ceef9c" target="_blank">OpenCEX documentation</a> | <a href="https://t.me/opencex" target="_blank">Telegram chat</a>
+This is the <strong>QOGE fork</strong> of unmaintained Polygant OpenCEX.
 </p>
 
 > [!NOTE]
-> This is the QOGE fork of unmaintained Polygant OpenCEX (`master` only).
-> Installer clones backend, frontend, static, and admin from `github.com/QOGE/...`.
+> Installer clones backend, frontend, static, and admin from `github.com/QOGE/...` (`master` only).
+> Live instance: [https://exchange.qoge.org](https://exchange.qoge.org).
 
 > [!CAUTION]
-> Upstream Polygant OpenCEX is not maintained.
-> The original code is provided as-is.
+> Upstream Polygant OpenCEX is not maintained. The original code is provided as-is under Apache License 2.0.
 
-## Main features.
+## Markets
 
--   Custodial wallet supporting BTC, ETH, BNB, TRX, USDT (ERC-20, BEP-20, TRC-20). Deposit and withdrawal.
--   Order matching engine. Trading pairs BTC-USDT, ETH-USDT, BNB-USDT, TRX-USDT.
--   Professional exchange interface for placing orders.    
--   Simplified interface for quick swap.
--   KYT transaction verification (requires Scorechain keys).
--   KYC verification of users (requires Sumsub keys).
--   SMS 2fa for users (requires Twilio keys).
+**Bitcoin (BTC) is not supported.** The installer leaves `COMMON_TASKS_BTC=False`, does not run bitcoind, and does not ask for a BTC cold address.
 
-## System requirements.
+Listed markets on this fork:
+
+| Pair | Quote | Notes |
+| --- | --- | --- |
+| **QOGE-USDT** | USDT | The only USDT market. Default trade pair. |
+| **ETH-QOGE** | QOGE | Inverted: price is QOGE per ETH. |
+| **TRX-QOGE** | QOGE | Inverted: price is QOGE per TRX. |
+| **BNB-QOGE** | QOGE | Inverted: price is QOGE per BNB. |
+
+ETH, TRX, and BNB are quoted in QOGE. There is no ETH-USDT, TRX-USDT, BNB-USDT, or BTC-* book on this listing.
+
+## Main features
+
+- Custodial wallets for **QOGE**, ETH, BNB, TRX, and USDT (ERC-20, BEP-20, TRC-20). Deposit and withdrawal.
+- QOGE custody talks to a **host Qogecoin Core** daemon (RPC 8332). The node is not a compose service.
+- Order matching engine for the pairs above.
+- Professional exchange interface for placing orders.
+- Simplified interface for quick swap.
+- KYT transaction verification (requires Scorechain keys).
+- KYC verification of users (requires Sumsub keys).
+- SMS 2FA for users (requires Twilio keys).
+
+Staff console is the Vue app at `/admin/`, talking to `/apiadmin/`. Django contrib admin is not mounted.
+
+## System requirements
 
 <table>
 <tr>
@@ -38,8 +50,8 @@ Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.
 <td><b>Recommended</b></td>
 </tr>
 <tr>
-<td>CPU: 4 cores<br>RAM: 16 GB<br>Disks: 40 GB<br>OS: Ubuntu 22.04<br><br><a href="https://www.hetzner.com/cloud" target="_blank">https://www.hetzner.com/cloud</a></td>
-<td>CPU: 8 cores<br>RAM: 64 Gb<br>Disks: 2x1Tb NVMe SSD<br>OS: Ubuntu 22.04<br><br><a href="https://www.hetzner.com/dedicated-rootserver/ax51-nvme" target="_blank">https://www.hetzner.com/dedicated-rootserver/ax51-nvme</a></td>
+<td>CPU: 4 cores<br>RAM: 16 GB<br>Disks: 40 GB plus QOGE chain data on the host<br>OS: Ubuntu 22.04 or 24.04<br><br><a href="https://www.hetzner.com/cloud" target="_blank">https://www.hetzner.com/cloud</a></td>
+<td>CPU: 8 cores<br>RAM: 64 GB<br>Disks: 2x1Tb NVMe SSD<br>OS: Ubuntu 22.04 or 24.04<br><br><a href="https://www.hetzner.com/dedicated-rootserver/ax51-nvme" target="_blank">https://www.hetzner.com/dedicated-rootserver/ax51-nvme</a></td>
 </tr>
 </table>
 
@@ -51,7 +63,7 @@ Developed by <a href="https://polygant.net" target="_blank">Polygant</a>.
 <tr><td>Caddy</td><td>lucaslorentz/caddy-docker-proxy:2.13.1</td><td>TLS reverse proxy</td></tr>
 <tr><td>Postgres</td><td>14</td><td>RDBMS (do not use postgres:latest)</td></tr>
 <tr><td>Redis server</td><td>7.0.4</td><td>Cache / broker helper</td></tr>
-<tr><td>RabbitMQ</td><td>3.9.22-management</td><td>Message-broker software</td></tr>
+<tr><td>RabbitMQ</td><td>3.9.22-management</td><td>Message-broker software (docker network only; 15672 is not published)</td></tr>
 <tr><td>Python</td><td>3.8.18</td><td>Backend runtime (EOL; upgrade is a dedicated project)</td></tr>
 <tr><td>Django</td><td>3.2.25</td><td>Backend framework (last 3.2.x; 4.2+ is a dedicated project)</td></tr>
 <tr><td>VUE.JS</td><td>3.2.25</td><td>JS framework</td></tr>
@@ -63,22 +75,23 @@ Python 3.8 and Django 3.2 are both end-of-life. This installer pins Python 3.8.1
 
 `opencex.sh` clones backend/frontend/static/admin at the commits listed at the top of the script (override with `BACKEND_COMMIT` and friends). It uses `postgres:14` rather than `postgres:latest`, `set -e`, `collectstatic --noinput`, and non-interactive `docker exec`. Data directories are mode 700. Do not regenerate `docker-compose.yml` on a running database (`FORCE_COMPOSE=1` is required to overwrite). Do not change the live Postgres image under an existing `postgresql_data` volume.
 
-## Before installing:
+## Before installing
 
--   Watch the installation video [https://youtu.be/c-WnQkvBwf0](https://youtu.be/c-WnQkvBwf0)
--   Order a virtual or physical server, not below the minimum requirements. You will need full access to this server (root). Shared hosting will not work.
--   Bind the IPv4 address you received when purchasing the server to your domain. If you don't have a domain yet, you can use [https://nip.io/](https://nip.io/) or [https://sslip.io/](https://sslip.io/).
--   Sign up for a Google account and get reCAPTCHA V2 keys (invisible). [https://www.google.com/recaptcha/](https://www.google.com/recaptcha/)
--   Get the SMTP server credentials for sending emails (any will do, i.e. [https://www.mailgun.com/](https://www.mailgun.com/)).
--   Register an Infura account ([https://infura.io/](https://infura.io/)) and create an API key + secret.
--   Register an Etherscan account ([https://etherscan.io/](https://etherscan.io/)) and create an API key.
--   You will need BTC, ETH addresses and BNB, TRX addresses(optional) to collect cryptocurrency deposits (cold addresses). If you don't have it yet, you can use any multi-currency wallet like Trust Wallet and generate BTC, ETH, BNB, TRX addresses.
--   OPTIONAL. For BNB и BEP-20 support you will need Bscscan credentials (https://bscscan.com/)
--   OPTIONAL. For TRX and TRC-20 support you will need Trondrid credentials (https://www.trongrid.io/)
--   OPTIONAL. For SMS verification you will need Twilio credentials ([https://twilio.com](https://twilio.com))
--   OPTIONAL. For KYT you need Scorechain credentials ([https://www.scorechain.com/](https://www.scorechain.com/))
--   OPTIONAL. For KYC you will need Sumsub credentials ([https://sumsub.com/](https://sumsub.com/))
-    
+- Order a virtual or physical server, not below the minimum requirements. You will need full access to this server (root). Shared hosting will not work.
+- Bind the IPv4 address you received when purchasing the server to your domain. If you don't have a domain yet, you can use [https://nip.io/](https://nip.io/) or [https://sslip.io/](https://sslip.io/).
+- Run **Qogecoin Core on the host** before or right after install. Containers reach it as `host.docker.internal:8332`. Configure `rpcuser` / `rpcpassword` to match `QOGE_NODE_USER` / `QOGE_NODE_PASS` in `/app/opencex/backend/.env`, `rpcallowip` covering the Docker bridge (for example `172.16.0.0/12`), and a watch-only wallet named `opencex` (`disable_private_keys=true`).
+- Sign up for a Google account and get reCAPTCHA V2 keys (invisible). [https://www.google.com/recaptcha/](https://www.google.com/recaptcha/)
+- Get the SMTP server credentials for sending emails (any will do, i.e. [https://www.mailgun.com/](https://www.mailgun.com/)).
+- Register an Infura account ([https://infura.io/](https://infura.io/)) and create an API key + secret (ETH deposits).
+- Register an Etherscan account ([https://etherscan.io/](https://etherscan.io/)) and create an API key.
+- You will need a **QOGE** cold address (legacy `q…`) and an **ETH** address to collect deposits. Optional: BNB and TRX cold addresses when those chains are enabled. A multi-currency wallet such as Trust Wallet is enough to generate ETH/BNB/TRX addresses.
+- OPTIONAL. For BNB and BEP-20 support you will need Bscscan / Etherscan V2 credentials (https://bscscan.com/)
+- OPTIONAL. For TRX and TRC-20 support you will need TronGrid credentials (https://www.trongrid.io/)
+- OPTIONAL. For SMS verification you will need Twilio credentials ([https://twilio.com](https://twilio.com))
+- OPTIONAL. For KYT you need Scorechain credentials ([https://www.scorechain.com/](https://www.scorechain.com/))
+- OPTIONAL. For KYC you will need Sumsub credentials ([https://sumsub.com/](https://sumsub.com/))
+
+Hummingbot is optional (`IS_HUMMINGBOT_ENABLED`). The matcher, wallets, and QOGE listing work without it.
 
 ## Installation
 
@@ -99,22 +112,18 @@ If something goes wrong you can clean the installation and try again
     rm -rf /app ;
     docker system prune -a
 
-🥳 Congratulations, the exchange has been successfully installed!  
-You can open it by your domain name.
+The exchange is then available on your domain.
 
-**After installation, copy any mode-600 files from `/app/opencex/backend/.handoff/` off the server and delete them. They hold keeper cosigner keys and the generated admin password. Do not leave them on the host.**
+**After installation, copy any mode-600 files from `/app/opencex/backend/.handoff/` off the server and delete them. They hold keeper cosigner keys, the generated admin password, and (when created) the admin TOTP secret. Do not leave them on the host.**
 
-**Mind that BTC node will take up to 30 hours to fully sync. BTC transactions sent to user addresses in this period will be collected and credited only after a full sync.**
+Staff TOTP is provisioned out of band (`manage.py provision_admin_otp <username>` or the wizard handoff). First password login at `/apiadmin/login/` does not mint a QR. Restrict `/admin/` and `/apiadmin/` to operator IPs.
 
-## Documentation
--   [OpenCEX Help Center](https://www.notion.so/polygant/OpenCEX-Help-Center-8cf8c842bde947c3818a615a88ceef9c)
--   [Admin panel Guide](https://docs.google.com/document/d/1VoBFEjzmGXzNHQYfvu8BYHvoSv9Sg73AV9wWGvsRJ04/edit#)
+RabbitMQ management stays on the docker network (`rabbitmq:15672`). Reach it with an SSH tunnel.
 
-## Can I hire you guys?
-
-You can request a consultation or order web and mobile development services by Polygant, just visit our site. 😎
-
-Say hi: [hello@polygant.net](mailto:hello@polygant.net) . We will be happy to work with you!
+Do not rotate `CRYPTO_KEY` on an existing database.
 
 ## License
-Apache License, Version 2.0
+
+Apache License, Version 2.0.
+
+Original OpenCEX was developed by [Polygant](https://polygant.net). See `NOTICE` for upstream attribution.
