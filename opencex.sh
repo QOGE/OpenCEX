@@ -1243,16 +1243,6 @@ echo "  rpcuser/rpcpassword = QOGE_NODE_USER / QOGE_NODE_PASS in /app/opencex/ba
 echo "  rpcallowip covering the Docker bridge (e.g. 172.16.0.0/12)"
 echo "  wallet=opencex (watch-only, disable_private_keys=true)"
 
-### Optional registration ping to upstream Polygant (off by default).
-if [ "${OPENCEX_PHONE_HOME:-0}" = "1" ]; then
-  curl --location 'http://alertbot.plgdev.com/registration' \
-    --header 'Content-Type: application/json' \
-    --data "{\"domain\": \"${DOMAIN}\"}"
-else
-  echo "Skipping Polygant registration POST (set OPENCEX_PHONE_HOME=1 to enable)."
-fi
-
-
 # cleanup
 # cd /app/opencex && docker compose down
 # rm -rf /app
