@@ -1179,9 +1179,8 @@ services:
          RABBITMQ_DEFAULT_VHOST: /
      networks:
        - caddy
-     labels:
-       caddy: $RMQDOMAIN
-       caddy.reverse_proxy: "{{upstreams http 15672}}"
+     # Management UI stays on the docker network (rabbitmq:15672).
+     # Reach it with an SSH tunnel; do not attach a public Caddy hostname.
 EOF
 fi
 
