@@ -838,6 +838,12 @@ services:
      extra_hosts:
       - "host.docker.internal:host-gateway"
      restart: always
+     healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/api/public/v1/ticker', headers={'Host':'$DOMAIN'}), timeout=4)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
      volumes:
       - /app/opencex/backend:/app
      networks:
@@ -914,6 +920,12 @@ services:
      restart: always
      extra_hosts:
       - "host.docker.internal:host-gateway"
+     healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(4); s.connect(('host.docker.internal',8332)); s.close()"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 20s
      volumes:
       - /app/opencex/backend:/app
      networks:
@@ -1111,6 +1123,11 @@ services:
      image: frontend:latest
      container_name: frontend
      restart: always
+     healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
      volumes:
      - /app/opencex/backend/staticfiles:/app/staticfiles:ro
      - /app/opencex/backend/media:/app/media:ro
@@ -1169,6 +1186,12 @@ services:
      restart: always
      image: $POSTGRES_IMAGE
      shm_size: 1g
+     healthcheck:
+       test: ["CMD-SHELL", "pg_isready -U $DB_USER -d $DB_NAME"]
+       interval: 30s
+       timeout: 5s
+       retries: 3
+       start_period: 20s
      volumes:
         - ./postgresql_data:/var/lib/postgresql/data
      environment:
@@ -1185,6 +1208,11 @@ services:
      user: "999:999"
      volumes:
          - ./redis_data:/data
+     healthcheck:
+       test: ["CMD", "redis-cli", "ping"]
+       interval: 30s
+       timeout: 5s
+       retries: 3
      networks:
        - caddy
     rabbitmq:

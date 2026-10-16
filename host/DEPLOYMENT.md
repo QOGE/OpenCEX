@@ -30,6 +30,18 @@ Application images (`opencex`, `frontend`, `nuxt`, `admin`) are built locally an
 
 New installs from `opencex.sh` still use `postgres:14`, `redis:7.0.4`, `rabbitmq:3.9.22-management`, `lucaslorentz/caddy-docker-proxy:2.13.1`.
 
+## Health (O-08)
+
+Live compose healthchecks (require container recreate; keep the same image and named volume for Postgres):
+
+- `opencex` gunicorn: ticker `http://127.0.0.1:8080/api/public/v1/ticker` with Host `$DOMAIN`
+- `opencex-qoge`: TCP `host.docker.internal:8332`
+- `frontend`: `wget http://127.0.0.1/`
+- `postgresql`: `pg_isready`
+- `redis`: `redis-cli ping`
+
+RabbitMQ is left without a live healthcheck recreate (Celery flaps). Cursor stall is only in the host cron: fail if gap > 50 and the cursor did not move since the previous run; a moving cursor during catch-up is a warning. Confirmations N=6 so a gap of about 5 is healthy. Do not jump `LastProcessedBlock`.
+
 ## Host files
 
 | Live path | This repo |
@@ -40,6 +52,8 @@ New installs from `opencex.sh` still use `postgres:14`, `redis:7.0.4`, `rabbitmq
 | `/etc/opencex/ssh-allow.ipv4` | `host/ssh-allow.ipv4.example` |
 | `/etc/opencex/nginx-admin-allow.conf` | `host/nginx-admin-allow.conf.example` |
 | `/usr/local/sbin/opencex-backup.sh` | `host/opencex-backup.sh` |
+| `/usr/local/sbin/opencex-health.sh` | `host/opencex-health.sh` |
+| `/etc/cron.d/opencex-health` | `host/opencex-health.cron` |
 | frontend nginx overlay | `frontend/default.conf` (`/admin` + `admin-allow.conf`) |
 
 ## Overlays that stay host-local
