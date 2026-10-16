@@ -20,6 +20,7 @@ POSTGRES_IMAGE="${POSTGRES_IMAGE:-postgres:14}"
 REDIS_IMAGE="${REDIS_IMAGE:-redis:7.0.4}"
 RABBITMQ_IMAGE="${RABBITMQ_IMAGE:-rabbitmq:3.9.22-management}"
 CADDY_IMAGE="${CADDY_IMAGE:-lucaslorentz/caddy-docker-proxy:2.13.1}"
+DOCKER_SOCKET_PROXY_IMAGE="${DOCKER_SOCKET_PROXY_IMAGE:-tecnativa/docker-socket-proxy:0.3.0}"
 
 rand_alnum() {
     local n="${1:-32}"
@@ -810,6 +811,7 @@ docker build -t opencex .
 mkdir /app/opencex -p
 cd /app/opencex || exit
 mkdir caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs -p
+mkdir -p /app/opencex/backend/media /app/opencex/backend/staticfiles
 chmod 700 caddy_data postgresql_data redis_data rabbitmq_data rabbitmq_logs
 # Official postgres/redis/rabbitmq images run as uid 999.
 chown 999:999 postgresql_data redis_data rabbitmq_data rabbitmq_logs
@@ -1110,7 +1112,8 @@ services:
      container_name: frontend
      restart: always
      volumes:
-     - /app/opencex/backend:/app
+     - /app/opencex/backend/staticfiles:/app/staticfiles:ro
+     - /app/opencex/backend/media:/app/media:ro
      networks:
      - caddy
      labels:
@@ -1128,6 +1131,22 @@ services:
      restart: always
      networks:
      - caddy
+    docker-socket-proxy:
+      image: $DOCKER_SOCKET_PROXY_IMAGE
+      container_name: docker-socket-proxy
+      restart: always
+      environment:
+        CONTAINERS: 1
+        NETWORKS: 1
+        TASKS: 1
+        SERVICES: 1
+        INFO: 1
+        VERSION: 1
+        POST: 0
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+      networks:
+        - caddy
     caddy:
       image: $CADDY_IMAGE
       restart: always
@@ -1136,11 +1155,13 @@ services:
         - 443:443
       environment:
         - CADDY_INGRESS_NETWORKS=caddy
+        - DOCKER_HOST=tcp://docker-socket-proxy:2375
       networks:
         - caddy
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock:ro
         - ./caddy_data:/data
+      depends_on:
+        - docker-socket-proxy
 
     postgresql:
      container_name: postgresql
@@ -1161,9 +1182,9 @@ services:
      container_name: redis
      restart: always
      image: $REDIS_IMAGE
+     user: "999:999"
      volumes:
          - ./redis_data:/data
-     entrypoint: redis-server
      networks:
        - caddy
     rabbitmq:
