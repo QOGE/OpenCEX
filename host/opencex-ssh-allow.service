@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply OpenCEX host firewall (SSH allowlist + public ports)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/opencex-apply-firewall.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

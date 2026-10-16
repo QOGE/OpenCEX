@@ -1,0 +1,7 @@
+# Generated on the host from ssh-allow.ipv4 / ssh-allow.ipv6.
+# Live path: /etc/opencex/nginx-admin-allow.conf
+# Mounted into frontend nginx as /etc/nginx/admin-allow.conf
+allow 127.0.0.1;
+allow ::1;
+allow OPERATOR_IPV4/32;
+deny all;
