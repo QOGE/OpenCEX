@@ -93,6 +93,8 @@ Python 3.8 and Django 3.2 are both end-of-life. This installer pins Python 3.8.1
 
 Hummingbot is optional (`IS_HUMMINGBOT_ENABLED`). The matcher, wallets, and QOGE listing work without it.
 
+Operators and Grok Build: read **[`host/POST-INSTALL.md`](host/POST-INSTALL.md)** before running `opencex.sh`. It records blockers this fork actually hit (QOGE RPC/firewall, installer traps, custody, host overlays). `opencex.sh` does not install the firewall, SSH allowlist, backups, or health cron.
+
 ## Installation
 
 You need to SSH into your server as root and run the following command:
@@ -114,9 +116,9 @@ If something goes wrong you can clean the installation and try again
 
 The exchange is then available on your domain.
 
-**After installation, copy any mode-600 files from `/app/opencex/backend/.handoff/` off the server and delete them. They hold keeper cosigner keys, the generated admin password, and (when created) the admin TOTP secret. Do not leave them on the host.**
+**After installation, follow [`host/POST-INSTALL.md`](host/POST-INSTALL.md).** Copy any mode-600 files from `/app/opencex/backend/.handoff/` off the server and delete them. They hold keeper cosigner keys, the generated admin password, and (when created) the admin TOTP secret. Do not leave them on the host.
 
-Staff TOTP is provisioned out of band (`manage.py provision_admin_otp <username>` or the wizard handoff). First password login at `/apiadmin/login/` does not mint a QR. Restrict `/admin/` and `/apiadmin/` to operator IPs.
+Staff TOTP is provisioned out of band (`manage.py provision_admin_otp <username>` or the wizard handoff). First password login at `/apiadmin/login/` does not mint a QR. Restrict `/admin/` and `/apiadmin/` to operator IPs. `ADMIN_MASTERPASS` is for balance credit/debit; the wizard login password is random and lives in `.handoff`.
 
 RabbitMQ management stays on the docker network (`rabbitmq:15672`). Reach it with an SSH tunnel.
 

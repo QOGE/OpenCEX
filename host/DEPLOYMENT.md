@@ -1,5 +1,7 @@
 # Live deployment reconstruction (O-07)
 
+New installs: [`POST-INSTALL.md`](POST-INSTALL.md). This page is the development box (`exchange.qoge.org`), including image digests that must not be copied onto a fresh Redis/Postgres volume.
+
 Do **not** rerun `opencex.sh` against an existing database. Do **not** set `FORCE_COMPOSE=1` on a custody host. The installer writes `/app/opencex/docker-compose.yml` with secrets; the live file stays on the host (mode 600 copies under `/root/opencex-backups/`).
 
 ## Git checkouts

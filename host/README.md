@@ -1,6 +1,8 @@
 # Host recovery helpers
 
-See `DEPLOYMENT.md` for live image pins, git remotes, and overlay paths. Do not rerun `opencex.sh` on a host that already has a database.
+For a **new** install, start with [`POST-INSTALL.md`](POST-INSTALL.md) (before `opencex.sh` and again after the wizard).
+
+See `DEPLOYMENT.md` for live image pins, git remotes, and overlay paths on the development box. Do not rerun `opencex.sh` on a host that already has a database.
 
 `opencex-backup.sh` is installed on the exchange box as `/usr/local/sbin/opencex-backup.sh` and run from `/etc/cron.d/opencex-backup` (03:15 UTC).
 
